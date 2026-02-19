@@ -57,8 +57,8 @@ export default class Entity {
         this.hp -= amount;//hp = hp - amount
         this.invulnerable = true;
 
-        console.log("Dano:", amount, "HP:", this.hp);
-
+        // console.log("Dano:", amount, "HP:", this.hp);
+        console.log("HP inimigo:", this.hp, "/", this.maxHp);
         this.scene.tweens.add({ //feedback visual
             targets: this.sprite,
             alpha: 0.3,
@@ -134,7 +134,7 @@ export default class Entity {
                 this.scene.releaseTile(this.targetTile.x, this.targetTile.y);
                 this.targetTile = null;       
             }
-            
+
             return;
         }
         

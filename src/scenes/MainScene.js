@@ -1,5 +1,6 @@
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
+import PlayerHealthBar from '../ui/PlayerHealthBar.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -12,7 +13,6 @@ export default class MainScene extends Phaser.Scene {
   }
 
   create() {
-    
     
     //configuraçao do mundo
     this.tileSize = 32;
@@ -73,7 +73,7 @@ export default class MainScene extends Phaser.Scene {
 
     //player
     this.player = new Player(this, 100, 100);
-    
+    this.playerHealthBar = new PlayerHealthBar(this, this.player);
     //enemy
     this.enemy = new Enemy(this, 200, 200, this.player);
  
@@ -131,6 +131,8 @@ export default class MainScene extends Phaser.Scene {
       this.player.update(time, delta);
     }
       this.enemy.update(time, delta);
+
+      this.playerHealthBar.update();
   }
 
   isTileOccupied(tileX, tileY, requester=null) {
@@ -177,5 +179,14 @@ export default class MainScene extends Phaser.Scene {
   isTileReserved(tileX, tileY) {
     return this.reservedTiles.has(`${tileX},${tileY}`);
   }
-  
+
+  getEntityAtTile(tileX, tileY) {
+    const { x: ex, y: ey } = this.enemy.getTilePosition();
+
+    if (ex === tileX && ey === tileY) {
+      return this.enemy;
+    }
+
+    return null;
+  }
 }

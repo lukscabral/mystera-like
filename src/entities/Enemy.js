@@ -1,10 +1,15 @@
 import Entity from "./Entity.js";
+import HealthBar from "../ui/HealthBar.js";
 
 export default class Enemy extends Entity {
     constructor(scene, x, y, player) {
         super(scene, x, y, "enemy");
 
         this.player = player;
+
+        this.maxHp = 40;
+        this.hp = this.maxHp;
+        this.healthBar = new HealthBar(scene, this);
 
         this.speed = 60;
         this.detectRange = 150;
@@ -41,6 +46,8 @@ export default class Enemy extends Entity {
         this.checkPlayerDistance();
 
         this.updateMovement(dt);
+
+        this.healthBar.update();
     }
 
     updateIdle() {
@@ -83,7 +90,7 @@ export default class Enemy extends Entity {
         } else {
             this.tryMoveTile(0, Math.sign(dy));
         }
-        
+
         if (dist === 0) return;
 
         if (dist > this.detectRange) {
@@ -115,6 +122,14 @@ export default class Enemy extends Entity {
 
         if (dist < this.detectRange && this.state !== "chase") {
             this.state = "chase";
+        }
+    }
+
+    die() {
+        super.die();
+
+        if (this.healthBar) {
+            this.healthBar.destroy();
         }
     }
 }
