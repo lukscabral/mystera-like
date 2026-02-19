@@ -1,0 +1,120 @@
+import Entity from "./Entity.js";
+
+export default class Enemy extends Entity {
+    constructor(scene, x, y, player) {
+        super(scene, x, y, "enemy");
+
+        this.player = player;
+
+        this.speed = 60;
+        this.detectRange = 150;
+        this.attackRange = 30;
+
+        this.state = "idle";
+        this.stateTimer = 0;
+
+        this.direction = new Phaser.Math.Vector2(0, 0);
+
+    }
+
+    update(time, delta) {
+        
+        if (this.isDead) return;
+        
+        const dt = delta / 1000;
+        this.stateTimer -= dt;
+
+        switch (this.state) {
+            case "idle":
+                this.updateIdle();
+                break;
+
+            case "wander":
+                this.updateWander(dt);
+                break;
+            
+            case "chase":
+                this.updateChase(dt);
+                break;
+        }
+
+        this.checkPlayerDistance();
+
+        this.updateMovement(dt);
+    }
+
+    updateIdle() {
+        if (this.stateTimer <= 0){
+            this.startWander();
+        }
+    }
+
+    startWander() {
+        this.state = "wander";
+        this.stateTimer = Phaser.Math.Between(1, 3);
+
+        this.direction.set(
+            Phaser.Math.RND.pick([-1, 0, 1]),
+            Phaser.Math.RND.pick([-1, 0, 1])
+        );
+    }
+
+    updateWander(){//recebia dt = 0
+
+        if (this.isMoving) return;
+
+        this.tryMoveTile(this.direction.x, this.direction.y);
+
+        if (this.stateTimer <= 0) {
+            this.state = "idle";
+            this.stateTimer = Phaser.Math.Between(1, 2);
+        }
+    }
+
+    updateChase(dt){ // recebia dt = 0
+
+        const dx = this.player.x - this.x;
+        const dy = this.player.y - this.y;
+
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+            this.tryMoveTile(Math.sign(dx), 0);
+        } else {
+            this.tryMoveTile(0, Math.sign(dy));
+        }
+        
+        if (dist === 0) return;
+
+        if (dist > this.detectRange) {
+            this.state = "idle";
+            return;
+        }
+
+
+        if (!this.isMoving) {
+            if (Math.abs(dx) > Math.abs(dy)) {
+                this.moveDirection(Math.sign(dx), 0);
+            } else {
+                this.moveDirection(0, Math.sign(dy));
+            }
+        }
+    
+        //dano ao encostar
+        if (dist < this.attackRange) {
+            this.player.takeDamage(10);
+        }
+    }
+
+    //detecçao
+    checkPlayerDistance() {
+        const dx = this.player.x - this.x;
+        const dy = this.player.y - this.y;
+
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < this.detectRange && this.state !== "chase") {
+            this.state = "chase";
+        }
+    }
+}
