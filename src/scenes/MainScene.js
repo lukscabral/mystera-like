@@ -55,6 +55,10 @@ export default class MainScene extends Phaser.Scene {
         height: this.mapHeight
     });
 
+    //concorrencia de movimento
+    this.reservedTiles = new Set();
+    this.occupiedTiles = new Map();
+
     //tileset procedural
     const graphics = this.make.graphics({ x: 0,y: 0, add: false});
     graphics.fillStyle(0x2d6a4f, 1);
@@ -71,12 +75,26 @@ export default class MainScene extends Phaser.Scene {
     this.layer.setDepth(0);//ordem z-index
     this.layer.setCollision([1]);  //parede = tile 1
 
+    this.entities = [];
     //player
     this.player = new Player(this, 100, 100);
     this.playerHealthBar = new PlayerHealthBar(this, this.player);
     //enemy
     this.enemy = new Enemy(this, 200, 200, this.player);
  
+    this.entities.push(this.player);
+    this.entities.push(this.enemy);
+
+    
+
+    //registrar posiçao inicial das entidades
+    let pPos = this.player.getTilePosition();
+    this.occupyTile(pPos.x, pPos.y, this.player);
+
+    let ePos = this.enemy.getTilePosition();
+    this.occupyTile(ePos.x, ePos.y, this.enemy);
+
+
     this.physics.add.overlap(
       this.player.sprite,
       this.enemy.sprite,
@@ -114,15 +132,15 @@ export default class MainScene extends Phaser.Scene {
     });
 
     //move por tile
-
     this.moveTarget = new Phaser.Math.Vector2();
 
     //força o player a alinhar ao grid
     this.player.sprite.x = Math.round(this.player.sprite.x / this.tileSize) * this.tileSize + this.tileSize / 2;
     this.player.sprite.y = Math.round(this.player.sprite.y / this.tileSize) * this.tileSize + this.tileSize / 2;
 
-    //concorrencia de movimento
-    this.reservedTiles = new Set();
+
+
+   
   }
 
   update(time, delta) {
@@ -135,21 +153,17 @@ export default class MainScene extends Phaser.Scene {
       this.playerHealthBar.update();
   }
 
-  isTileOccupied(tileX, tileY, requester=null) {
-      
+  isTileOccupied(tileX, tileY, ignoreEntity = null) {
+    const entity = this.occupiedTiles.get(`${tileX},${tileY}`);
 
+    if (!entity) return false;
 
-      if (requester !== this.player) {
-        const { x: px, y: py } = this.player.getTilePosition();
-        if(tileX === px && tileY === py) return true;
-      }
+    if (entity === ignoreEntity) return false;
 
-      if (requester !== this.enemy) {
-        const { x: ex, y: ey } = this.enemy.getTilePosition();
-        if (tileX === ex && tileY === ey) return true;
-      }
+    if (entity.isDead) return false;
+    
 
-      return false;
+    return true;
   }
 
   isTileBlocked(tileX, tileY) {
@@ -161,6 +175,7 @@ export default class MainScene extends Phaser.Scene {
     ) return true;
 
     const tile = this.layer.getTileAt(tileX, tileY);
+
     return tile && tile.index === 1;
   }
 
@@ -181,12 +196,20 @@ export default class MainScene extends Phaser.Scene {
   }
 
   getEntityAtTile(tileX, tileY) {
-    const { x: ex, y: ey } = this.enemy.getTilePosition();
+    return this.occupiedTiles.get(`${tileX}, ${tileY}`) || null;
+  }
 
-    if (ex === tileX && ey === tileY) {
-      return this.enemy;
+  occupyTile(tileX, tileY, entity) {
+
+    for (const [key, value] of this.occupiedTiles.entries()) {
+      if (value === entity) {
+        this.occupiedTiles.delete(key);
+      }
     }
+    this.occupiedTiles.set(`${tileX}, ${tileY}`, entity);
+  }
 
-    return null;
+  freeTile(tileX, tileY) {
+    this.occupiedTiles.delete(`${tileX}, ${tileY}`);
   }
 }

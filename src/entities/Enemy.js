@@ -7,7 +7,7 @@ export default class Enemy extends Entity {
 
         this.player = player;
 
-        this.maxHp = 40;
+        this.maxHp = 20;
         this.hp = this.maxHp;
         this.healthBar = new HealthBar(scene, this);
 
@@ -66,7 +66,7 @@ export default class Enemy extends Entity {
         );
     }
 
-    updateWander(){//recebia dt = 0
+    updateWander(){
 
         if (this.isMoving) return;
 
@@ -78,7 +78,7 @@ export default class Enemy extends Entity {
         }
     }
 
-    updateChase(dt){ // recebia dt = 0
+    updateChase(dt){ 
 
         const dx = this.player.x - this.x;
         const dy = this.player.y - this.y;
@@ -126,10 +126,12 @@ export default class Enemy extends Entity {
     }
 
     die() {
+        
         super.die();
-
+ 
         if (this.healthBar) {
             this.healthBar.destroy();
         }
+        
     }
 }
