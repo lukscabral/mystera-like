@@ -1,6 +1,7 @@
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import PlayerHealthBar from '../ui/PlayerHealthBar.js';
+import GridManager from '../systems/GridManager.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -55,9 +56,7 @@ export default class MainScene extends Phaser.Scene {
         height: this.mapHeight
     });
 
-    //concorrencia de movimento
-    this.reservedTiles = new Set();
-    this.occupiedTiles = new Map();
+    this.grid = new GridManager(this);
 
     //tileset procedural
     const graphics = this.make.graphics({ x: 0,y: 0, add: false});
@@ -76,24 +75,20 @@ export default class MainScene extends Phaser.Scene {
     this.layer.setCollision([1]);  //parede = tile 1
 
     this.entities = [];
+    const tileX = 3;
+    const tileY = 3;
+
+    const worldX = tileX * this.tileSize + this.tileSize / 2;
+    const worldY = tileY * this.tileSize + this.tileSize / 2;
+    
     //player
-    this.player = new Player(this, 100, 100);
+    this.player = new Player(this, worldX, worldY);
     this.playerHealthBar = new PlayerHealthBar(this, this.player);
     //enemy
     this.enemy = new Enemy(this, 200, 200, this.player);
  
     this.entities.push(this.player);
     this.entities.push(this.enemy);
-
-    
-
-    //registrar posiçao inicial das entidades
-    let pPos = this.player.getTilePosition();
-    this.occupyTile(pPos.x, pPos.y, this.player);
-
-    let ePos = this.enemy.getTilePosition();
-    this.occupyTile(ePos.x, ePos.y, this.enemy);
-
 
     this.physics.add.overlap(
       this.player.sprite,
@@ -102,7 +97,6 @@ export default class MainScene extends Phaser.Scene {
       null,
       this
     );
-
 
     //camera
     this.cameras.main.setBounds(0,0, this.worldWidth,this.worldHeight);//camera recebe tamanho do mundo
@@ -134,13 +128,7 @@ export default class MainScene extends Phaser.Scene {
     //move por tile
     this.moveTarget = new Phaser.Math.Vector2();
 
-    //força o player a alinhar ao grid
-    this.player.sprite.x = Math.round(this.player.sprite.x / this.tileSize) * this.tileSize + this.tileSize / 2;
-    this.player.sprite.y = Math.round(this.player.sprite.y / this.tileSize) * this.tileSize + this.tileSize / 2;
 
-
-
-   
   }
 
   update(time, delta) {
@@ -153,18 +141,7 @@ export default class MainScene extends Phaser.Scene {
       this.playerHealthBar.update();
   }
 
-  isTileOccupied(tileX, tileY, ignoreEntity = null) {
-    const entity = this.occupiedTiles.get(`${tileX},${tileY}`);
-
-    if (!entity) return false;
-
-    if (entity === ignoreEntity) return false;
-
-    if (entity.isDead) return false;
-    
-
-    return true;
-  }
+  
 
   isTileBlocked(tileX, tileY) {
     if (
@@ -183,33 +160,7 @@ export default class MainScene extends Phaser.Scene {
     this.player.takeDamage(10);
   }
 
-  reserveTile(tileX, tileY) {
-    this.reservedTiles.add(`${tileX},${tileY}`);
-  }
-
-  releaseTile(tileX, tileY) {
-    this.reservedTiles.delete(`${tileX},${tileY}`);
-  }
-
-  isTileReserved(tileX, tileY) {
-    return this.reservedTiles.has(`${tileX},${tileY}`);
-  }
-
   getEntityAtTile(tileX, tileY) {
     return this.occupiedTiles.get(`${tileX}, ${tileY}`) || null;
-  }
-
-  occupyTile(tileX, tileY, entity) {
-
-    for (const [key, value] of this.occupiedTiles.entries()) {
-      if (value === entity) {
-        this.occupiedTiles.delete(key);
-      }
-    }
-    this.occupiedTiles.set(`${tileX}, ${tileY}`, entity);
-  }
-
-  freeTile(tileX, tileY) {
-    this.occupiedTiles.delete(`${tileX}, ${tileY}`);
   }
 }

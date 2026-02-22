@@ -4,7 +4,8 @@ import AttackHitbox from "./AttackHitbox.js";
 export default class Player extends Entity {
     constructor(scene, x ,y) {
         super(scene, x, y, "player");
-
+console.log("spawn sprite:", this.sprite.x, this.sprite.y);
+console.log("tile calculado:", this.currentTile);
         this.speed = 150;//especifico do player
 
         this.cursors = scene.input.keyboard.createCursorKeys();

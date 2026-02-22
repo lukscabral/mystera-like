@@ -5,6 +5,9 @@ export default class Entity {
         //cria sprite com physics
         this.sprite = scene.physics.add.sprite(x, y, texture);
         this.sprite.setOrigin(0.5);
+        this.sprite.body.setAllowGravity(false);
+        this.sprite.body.setImmovable(true);
+
         
         //stats base
         this.maxHp = 50;
@@ -21,16 +24,17 @@ export default class Entity {
         // renderizaçao padrao
         this.sprite.setDepth(10);
         
-        //colisao, impede de sair do mapa
-        // this.sprite.setCollideWorldBounds(true);
-        this.sprite.body.setImmovable(true);
-        
         this.moveTarget = new Phaser.Math.Vector2();
         this.direction = new Phaser.Math.Vector2();
 
-        this.sprite.body.setAllowGravity(false);
-
         this.alignToGrid();
+
+        this.currentTile = this.getTilePosition();
+        this.previousTile = null;
+        this.targetTile = null;
+        
+        
+        this.scene.grid.place(this, this.currentTile.x, this.currentTile.y);
     }
 
     //pegar posiçao
@@ -87,33 +91,31 @@ export default class Entity {
     }
 
     tryMoveTile(dirX, dirY) {
-        if (this.isMoving) return;
+        if (dirX !== 0 && dirY !== 0) return;
+        if (this.isMoving || this.isDead) return;
+        // console.trace("TRY MOVE:");
 
-        const { x, y } = this.getTilePosition();
+        const { x, y } = this.currentTile;
 
-        const targetTileX = x + dirX;
-        const targetTileY = y + dirY;
-        
-        if (this.scene.isTileBlocked(targetTileX, targetTileY)) return;
+        const targetX = x + dirX;
+        const targetY = y + dirY;
 
-        //ocupado pela entidade atual
-        if (this.scene.isTileOccupied(targetTileX, targetTileY, this)) return ;
+        const canMove = this.scene.grid.tryMove(
+            this,
+            x,
+            y,
+            targetX,
+            targetY
+        );
 
-        //reservado por alguem
-        if (this.scene.isTileReserved(targetTileX, targetTileY)) return;
+        if (!canMove) return;
 
-        //reserva o tile
-        this.scene.reserveTile(targetTileX, targetTileY);
-        //resolveu o problema do bloqueio do tile pos morte, reserved era undefined
-        this.reservedTile = { x: targetTileX, y:targetTileY };
-
-        this.previousTile = this.getTilePosition();
-
-        this.targetTile = { x: targetTileX, y: targetTileY };
+        this.previousTile = { x, y };
+        this.targetTile = { x: targetX, y: targetY };
 
         this.moveTarget.set(
-            targetTileX * this.tileSize + this.tileSize / 2,
-            targetTileY * this.tileSize + this.tileSize / 2
+            targetX * this.tileSize + this.tileSize / 2,
+            targetY * this.tileSize + this.tileSize / 2
         );
 
         this.isMoving = true;
@@ -121,44 +123,35 @@ export default class Entity {
     }
 
     updateMovement(dt) {
-        if (!this.isMoving) return;
+        if (!this.isMoving || this.isDead) return;
 
-        const dx = this.moveTarget.x - this.x;
-        const dy = this.moveTarget.y - this.y;
+        const dx = this.moveTarget.x - this.sprite.x;
+        const dy = this.moveTarget.y - this.sprite.y;//this.sprite.y??
 
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist <= this.speed * dt) {
-            this.x = this.moveTarget.x;
-            this.y = this.moveTarget.y;
+            this.sprite.x = this.moveTarget.x;
+            this.sprite.y = this.moveTarget.y;
 
-            this.alignToGrid();
+            // this.alignToGrid();
             this.isMoving = false;
 
+            // this.scene.grid.finishMove(this);
 
-            if (this.targetTile) {
+            // if (this.targetTile) {
                 //libera tile antigo
-                const old = this.previousTile;
-                if (old) {
-                    this.scene.freeTile(old.x, old.y);
+                this.scene.grid.finishMove(this);
 
-                }
-
-                //ocupa novo tile
-                this.scene.occupyTile(this.targetTile.x, this.targetTile.y, this);
-
-                //libera reserva
-                this.scene.releaseTile(this.targetTile.x, this.targetTile.y);
-
-                this.previousTile = this.targetTile;
-                this.targetTile = null;
-            }
+                // this.previousTile = this.targetTile;
+                // this.targetTile = null;
+            // }
 
             return;
         }
         
-        this.x += (dx / dist) * this.speed * dt;
-        this.y += (dy / dist) * this.speed * dt;
+        this.sprite.x += (dx / dist) * this.speed * dt;
+        this.sprite.y += (dy / dist) * this.speed * dt;
     }
 
     getTilePosition() {
@@ -187,27 +180,16 @@ export default class Entity {
         if (this.isDead) return;
 
         this.isDead = true;
-
+        this.isMoving = false;
+        
         console.log("morreu");
+
+        this.scene.grid.removeEntity(this);
         
         this.scene.entities = this.scene.entities.filter( // removendo entidade da lista
             e => e !== this
         );
-        
 
-        const { x, y } = this.getTilePosition();
-        this.scene.freeTile(x, y);
-
-        if (this.reservedTile) {
-            this.scene.releaseTile(this.reservedTile.x, this.reservedTile.y);
-        }
-
-        if (this.targetTile) {
-            this.scene.releaseTile(this.targetTile.x, this.targetTile.y);
-        }
-
-        this.isMoving = false;
-        
         this.sprite.disableBody(true, true);
         this.sprite.destroy();
     }
