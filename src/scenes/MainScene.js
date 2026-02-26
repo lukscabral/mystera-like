@@ -11,6 +11,8 @@ export default class MainScene extends Phaser.Scene {
   preload() {
     this.load.image('player', './assets/player.png');
     this.load.image('enemy', './assets/enemy.png');
+    this.load.image('sword', './assets/sword.png');
+    this.load.image('small_potion', './assets/small_potion.png');
   }
 
   create() {
@@ -90,13 +92,7 @@ export default class MainScene extends Phaser.Scene {
     this.entities.push(this.player);
     this.entities.push(this.enemy);
 
-    this.physics.add.overlap(
-      this.player.sprite,
-      this.enemy.sprite,
-      this.handlePlayerEnemyCollision,
-      null,
-      this
-    );
+
 
     //camera
     this.cameras.main.setBounds(0,0, this.worldWidth,this.worldHeight);//camera recebe tamanho do mundo
@@ -128,7 +124,19 @@ export default class MainScene extends Phaser.Scene {
     //move por tile
     this.moveTarget = new Phaser.Math.Vector2();
 
+    this.items = [];
 
+    this.itemsGroup = this.physics.add.group();
+
+    this.physics.add.overlap(
+      this.player.sprite,
+      this.itemsGroup,
+      this.handleItemPickup,
+      null,
+      this
+    );
+
+    
   }
 
   update(time, delta) {
@@ -162,5 +170,18 @@ export default class MainScene extends Phaser.Scene {
 
   getEntityAtTile(tileX, tileY) {
     return this.occupiedTiles.get(`${tileX}, ${tileY}`) || null;
+  }
+
+  handleItemPickup(playerSprite, itemSprite) {
+
+    const itemEntity = itemSprite.getData("itemEntity");
+
+    if (!itemEntity) return;
+
+    const added = this.player.inventory.addItem(itemEntity.itemData);
+
+    if (added) {
+      itemEntity.destroy();
+    }
   }
 }
